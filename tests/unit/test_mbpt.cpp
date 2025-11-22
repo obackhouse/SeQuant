@@ -707,8 +707,10 @@ SECTION("rules") {
     };
     const std::vector<std::wstring> expected = {
         L"t{a1,a2;i1,i2} t{a3;i3}",
-        L"t{a1,a2;i1,i2} B{i1;;x_1} B{;a2;x_1} C{;;x_1,x_2} B{i2;;x_2} B{;a1;x_2}",
-        L"t{a1,a2;i1,i2} (B{i1;;x_1} B{;a2;x_1} C{;;x_1,x_2} B{i2;;x_2} B{;a1;x_2}"
+        L"t{a1,a2;i1,i2} B{i1;;x_1} B{;a2;x_1} C{;;x_1,x_2} B{i2;;x_2} "
+        L"B{;a1;x_2}",
+        L"t{a1,a2;i1,i2} (B{i1;;x_1} B{;a2;x_1} C{;;x_1,x_2} B{i2;;x_2} "
+        L"B{;a1;x_2}"
         " - B{i2;;x_1} B{;a2;x_1} C{;;x_1,x_2} B{i1;;x_2} B{;a1;x_2})",
     };
 
@@ -727,5 +729,5 @@ SECTION("rules") {
 
       REQUIRE_THAT(actual, EquivalentTo(expected.at(i)));
     }
-}
+  }
 }
