@@ -15,6 +15,7 @@
 #include <SeQuant/domain/mbpt/convention.hpp>
 #include <SeQuant/domain/mbpt/op.hpp>
 #include <SeQuant/domain/mbpt/rules/df.hpp>
+#include <SeQuant/domain/mbpt/rules/thc.hpp>
 #include <SeQuant/domain/mbpt/utils.hpp>
 
 #include <catch2/catch_test_macros.hpp>
@@ -487,6 +488,7 @@ TEST_CASE("mbpt", "[mbpt]") {
       REQUIRE_NOTHROW(op::T_pt(1, {.nbatch = 20}));
 
       // invalid usages
+#if SEQUANT_ASSERT_BEHAVIOR == SEQUANT_ASSERT_THROW
       // cannot set both nbatch and batch_ordinals
       REQUIRE_THROWS_AS(op::H_pt(2, {.nbatch = 2, .batch_ordinals = {1, 2}}),
                         sequant::Exception);
@@ -496,6 +498,7 @@ TEST_CASE("mbpt", "[mbpt]") {
       // ordinals must be sorted
       REQUIRE_THROWS_AS(op::H_pt(1, {.batch_ordinals = {3, 2}}),
                         sequant::Exception);
+#endif
 
       // operations
       auto h0 = op::H_pt(1);
@@ -792,5 +795,37 @@ SECTION("rules") {
       REQUIRE_THAT(actual, EquivalentTo(expected.at(i)));
     }
   }
-}
+
+  SECTION("tensor-hypercontract") {
+    const std::vector<std::wstring> inputs = {
+        L"t{a1,a2;i1,i2} t{a3;i3}",
+        L"t{a1,a2;i1,i2} g{i1,i2;a1,a2}",
+        L"t{a1,a2;i1,i2} g{i1,i2;a1,a2}:A",
+    };
+    const std::vector<std::wstring> expected = {
+        L"t{a1,a2;i1,i2} t{a3;i3}",
+        L"t{a1,a2;i1,i2} B{i1;;x_1} B{;a1;x_1} C{;;x_1,x_2} B{i2;;x_2} "
+        L"B{;a2;x_2}",
+        L"t{a1,a2;i1,i2} (B{i1;;x_1} B{;a1;x_1} C{;;x_1,x_2} B{i2;;x_2} "
+        L"B{;a2;x_2}"
+        " - B{i2;;x_1} B{;a1;x_1} C{;;x_1,x_2} B{i1;;x_2} B{;a2;x_2})",
+    };
+
+    REQUIRE(inputs.size() == expected.size());
+
+    for (std::size_t i = 0; i < inputs.size(); ++i) {
+      CAPTURE(inputs.at(i));
+
+      ExprPtr input_expr = parse_expr(inputs.at(i));
+
+      const IndexSpace aux_space =
+          get_default_context().index_space_registry()->retrieve(L"x");
+
+      ExprPtr actual =
+          mbpt::tensor_hypercontract(input_expr, aux_space, L"g", L"B", L"C");
+
+      REQUIRE_THAT(actual, EquivalentTo(expected.at(i)));
+    }
+  }
+}  // SECTION("rules")
 }
